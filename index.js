@@ -118,7 +118,22 @@ async function handle(to, id) {
 // Meta verifies your webhook here
 app.get("/webhook", (req, res) => {
   if (
-    req.query["hub.mode"] === "subscribe" &&
+   app.get("/privacy", (req, res) =>
+     res.send(
+       "<h1>Privacy Policy - VEXA Media</h1>" +
+       "<p>VEXA Media uses WhatsApp to answer customer enquiries. " +
+       "We only use the messages and phone numbers you send us to reply to you and provide our services. " +
+       "We do not sell or share your data with third parties.</p>" +
+       "<p>To request deletion of your data, contact vexamediaworld@gmail.com.</p>"
+     )
+   );
+
+   app.get("/data-deletion", (req, res) =>
+     res.send(
+       "<h1>Data Deletion - VEXA Media</h1>" +
+       "<p>To delete your data, email vexamediaworld@gmail.com and we will remove it.</p>"
+     )
+   );    req.query["hub.mode"] === "subscribe" &&
     req.query["hub.verify_token"] === VERIFY
   ) {
     return res.status(200).send(req.query["hub.challenge"]);
