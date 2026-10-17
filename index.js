@@ -1,9 +1,14 @@
 const express = require("express");
 const axios = require("axios");
+const path = require("path");
 
 const app = express();
 app.use(express.json());
-app.use(express.static("public")); // serves your package images
+app.use(express.static("public")); // optional extra static files
+// Package images live in the repo root (001.jpg = Silver, 002.jpg = Gold, 003.jpg = Platinum)
+["001.jpg", "002.jpg", "003.jpg"].forEach((f) =>
+  app.get("/" + f, (req, res) => res.sendFile(path.join(__dirname, f)))
+);
 
 const TOKEN = process.env.TOKEN;       // Meta access token
 const PHONE_ID = process.env.PHONE_ID; // Phone Number ID
@@ -104,9 +109,9 @@ async function handle(to, id) {
   }
   if (id === "packages") {
     await text(to, "*VEXA Media - Social Media Packages*\nContent | Management | Growth");
-    await image(to, "silver.jpg", "*SILVER - Starter Package*\nDaily image posts. Perfect for brands starting their social presence.");
-    await image(to, "gold.jpg", "*GOLD - Growth Package*\nDaily image posts + 1 video every week. Built to grow your brand.");
-    await image(to, "platinum.jpg", "*PLATINUM - Premium Package*\nDaily image posts + 2 videos every week. Complete content + growth solution.");
+    await image(to, "001.jpg", "*SILVER - Starter Package*\nDaily image posts. Perfect for brands starting their social presence.");
+    await image(to, "002.jpg", "*GOLD - Growth Package*\nDaily image posts + 1 video every week. Built to grow your brand.");
+    await image(to, "003.jpg", "*PLATINUM - Premium Package*\nDaily image posts + 2 videos every week. Complete content + growth solution.");
     return nextButtons(to);
   }
   if (id === "support") {
