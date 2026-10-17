@@ -133,6 +133,18 @@ app.get("/webhook", (req, res) => {
 // Incoming customer messages
 app.post("/webhook", async (req, res) => {
   res.sendStatus(200);
+  console.log("INCOMING:", JSON.stringify(req.body));
+  try {
+    const m = req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
+    if (!m) return;
+    const id =
+      m.interactive?.list_reply?.id || m.interactive?.button_reply?.id || null;
+    await handle(m.from, id);
+  } catch (e) {
+    console.error("Handler error:", e.message);
+  }
+});
+  res.sendStatus(200);
   const m = req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
   if (!m) return;
   const id =
