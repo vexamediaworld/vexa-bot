@@ -1,0 +1,141 @@
+const express = require("express");
+const axios = require("axios");
+
+const app = express();
+app.use(express.json());
+app.use(express.static("public")); // serves your package images
+
+const TOKEN = process.env.TOKEN;       // Meta access token
+const PHONE_ID = process.env.PHONE_ID; // Phone Number ID
+const VERIFY = process.env.VERIFY;     // your secret word
+// Render sets RENDER_EXTERNAL_URL automatically
+const BASE_URL = process.env.BASE_URL || process.env.RENDER_EXTERNAL_URL;
+
+async function send(to, body) {
+  try {
+    await axios.post(
+      `https://graph.facebook.com/v25.0/${PHONE_ID}/messages`,
+      { messaging_product: "whatsapp", to, ...body },
+      { headers: { Authorization: `Bearer ${TOKEN}` } }
+    );
+  } catch (e) {
+    console.error("Send error:", e.response?.data || e.message);
+  }
+}
+
+const text = (to, msg) => send(to, { type: "text", text: { body: msg } });
+
+const image = (to, file, caption) =>
+  send(to, { type: "image", image: { link: `${BASE_URL}/${file}`, caption } });
+
+// Main menu (welcome message + 4 options)
+const mainMenu = (to) =>
+  send(to, {
+    type: "interactive",
+    interactive: {
+      type: "list",
+      body: { text: "Welcome to VEXA Media!\n\nPlease select an option:" },
+      action: {
+        button: "Open Menu",
+        sections: [
+          {
+            title: "VEXA Media",
+            rows: [
+              { id: "about", title: "About Us" },
+              { id: "services", title: "Our Services" },
+              { id: "packages", title: "Our Packages" },
+              { id: "support", title: "Contact Support" },
+            ],
+          },
+        ],
+      },
+    },
+  });
+
+// Two buttons shown after About / Services / Packages
+const nextButtons = (to) =>
+  send(to, {
+    type: "interactive",
+    interactive: {
+      type: "button",
+      body: { text: "Please select an option:" },
+      action: {
+        buttons: [
+          { type: "reply", reply: { id: "back", title: "Back to Main Menu" } },
+          { type: "reply", reply: { id: "support", title: "Contact Support" } },
+        ],
+      },
+    },
+  });
+
+// ---------- EDIT THESE TEXTS ----------
+const ABOUT =
+  "About VEXA Media\n\n" +
+  "VEXA Media is a digital marketing and media company with experience since 2013. " +
+  "We help brands grow online with creative content and results-driven marketing.";
+
+const SERVICES =
+  "Our Services\n\n" +
+  "- Social Media Management\n" +
+  "- Website Development\n" +
+  "- Video Shooting\n" +
+  "- Video Editing\n" +
+  "- AI Video Generation\n" +
+  "- Image Generation\n" +
+  "- Image Editing\n" +
+  "- Meta Ads\n" +
+  "- Google Ads\n" +
+  "- Other digital marketing services";
+
+const SUPPORT =
+  "Thank you for contacting VEXA Media!\n\n" +
+  "Our team will get in touch with you soon to understand your requirements " +
+  "and recommend the most suitable services and package for your business.";
+// --------------------------------------
+
+async function handle(to, id) {
+  if (id === "about") {
+    await text(to, ABOUT);
+    return nextButtons(to);
+  }
+  if (id === "services") {
+    await text(to, SERVICES);
+    return nextButtons(to);
+  }
+  if (id === "packages") {
+    await text(to, "*VEXA Media - Social Media Packages*\nContent | Management | Growth");
+    await image(to, "silver.jpg", "*SILVER - Starter Package*\nDaily image posts. Perfect for brands starting their social presence.");
+    await image(to, "gold.jpg", "*GOLD - Growth Package*\nDaily image posts + 1 video every week. Built to grow your brand.");
+    await image(to, "platinum.jpg", "*PLATINUM - Premium Package*\nDaily image posts + 2 videos every week. Complete content + growth solution.");
+    return nextButtons(to);
+  }
+  if (id === "support") {
+    return text(to, SUPPORT);
+  }
+  return mainMenu(to); // "back" or any other message
+}
+
+// Meta verifies your webhook here
+app.get("/webhook", (req, res) => {
+  if (
+    req.query["hub.mode"] === "subscribe" &&
+    req.query["hub.verify_token"] === VERIFY
+  ) {
+    return res.status(200).send(req.query["hub.challenge"]);
+  }
+  res.sendStatus(403);
+});
+
+// Incoming customer messages
+app.post("/webhook", async (req, res) => {
+  res.sendStatus(200);
+  const m = req.body.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
+  if (!m) return;
+  const id =
+    m.interactive?.list_reply?.id || m.interactive?.button_reply?.id || null;
+  await handle(m.from, id);
+});
+
+app.get("/", (req, res) => res.send("VEXA Media bot is running"));
+
+app.listen(process.env.PORT || 3000, () => console.log("Bot running"));
